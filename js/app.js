@@ -346,12 +346,15 @@ function renderDashboard() {
   const pendente = monthJobs.filter(j => j.status === "pendente").reduce((a, j) => a + Number(j.value || 0), 0);
   const total = monthJobs.reduce((a, j) => a + Number(j.value || 0), 0);
   const anoTotal = yearJobs.reduce((a, j) => a + Number(j.value || 0), 0);
+  const anoNF = yearJobs.filter(j => j.status === "pago_nf" || j.status === "pago_nf_pdf")
+                         .reduce((a, j) => a + Number(j.value || 0), 0);
   const ticket = monthJobs.length ? total / monthJobs.length : 0;
 
   $("cardRecebido").textContent = fmt(recebido);
   $("cardPendente").textContent = fmt(pendente);
   $("cardTotal").textContent = fmt(total);
   $("cardAno").textContent = fmt(anoTotal);
+  $("cardAnoNF").textContent = fmt(anoNF);
   $("cardJobs").textContent = monthJobs.length;
   $("cardTicket").textContent = fmt(ticket);
 
@@ -934,7 +937,12 @@ function renderMEI() {
   const disponivel = MEI_LIMIT - faturado;
   const pct = Math.min(faturado / MEI_LIMIT * 100, 100);
 
+  // Faturamento com Nota Fiscal emitida
+  const jobsComNF = yearJobs.filter(j => j.status === "pago_nf" || j.status === "pago_nf_pdf");
+  const faturadoNF = jobsComNF.reduce((a,j) => a + Number(j.value||0), 0);
+
   $("meiFaturado").textContent = fmt(faturado);
+  $("meiFaturadoNF").textContent = fmt(faturadoNF);
   $("meiDisponivel").textContent = fmt(disponivel);
   $("meiPercent").textContent = pct.toFixed(1) + "%";
   $("meiProgress").style.width = pct + "%";
