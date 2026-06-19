@@ -116,7 +116,7 @@
       <li><a href="#" class="nav-link" data-page="settings">⚙️ Configurações</a></li>
     </ul>
     <div class="sidebar-footer">
-      <a href="https://www.nfse.gov.br/EmissorNacional " target="_blank" class="btn-mei-link">🏛️ Portal MEI / NFS-e</a>
+      <a href="https://www.nfse.gov.br" target="_blank" class="btn-mei-link">🏛️ Portal MEI / NFS-e</a>
     </div>
   </nav>
   <div class="sidebar-overlay" id="sidebarOverlay"></div>
@@ -128,10 +128,13 @@
     <div id="page-dashboard" class="page active">
       <div class="page-header">
         <h2>Dashboard</h2>
-        <div class="month-nav">
-          <button id="prevMonth">‹</button>
-          <span id="currentMonthLabel"></span>
-          <button id="nextMonth">›</button>
+        <div class="dashboard-header-actions">
+          <button class="btn-outline btn-sm" id="dashFilterBtn">🔍 Filtrar</button>
+          <div class="month-nav">
+            <button id="prevMonth">‹</button>
+            <span id="currentMonthLabel"></span>
+            <button id="nextMonth">›</button>
+          </div>
         </div>
       </div>
 
@@ -256,7 +259,7 @@
     <div id="page-nf" class="page">
       <div class="page-header">
         <h2>Notas Fiscais</h2>
-        <a href="https://www.nfse.gov.br/EmissorNacional" target="_blank" class="btn-outline">🏛️ Abrir Portal NFS-e</a>
+        <a href="https://www.nfse.gov.br" target="_blank" class="btn-outline">🏛️ Abrir Portal NFS-e</a>
       </div>
       <div id="nfList" class="nf-grid"></div>
       <div id="nfEmpty" class="empty-state hidden">
@@ -269,6 +272,35 @@
     <div id="page-reports" class="page">
       <div class="page-header">
         <h2>Relatórios</h2>
+      </div>
+
+      <!-- NF x LIMITE MEI -->
+      <div class="section-card">
+        <h3>🧾 Notas Fiscais Emitidas × Limite MEI</h3>
+        <div class="nf-mei-summary">
+          <div class="nf-mei-stat">
+            <div class="nf-mei-label">Total faturado com NF emitida (ano)</div>
+            <div class="nf-mei-value" id="repNFTotal">R$ 0,00</div>
+          </div>
+          <div class="nf-mei-stat">
+            <div class="nf-mei-label">Qtd. de notas emitidas</div>
+            <div class="nf-mei-value" id="repNFCount">0</div>
+          </div>
+          <div class="nf-mei-stat">
+            <div class="nf-mei-label">% do limite MEI já coberto por NF</div>
+            <div class="nf-mei-value" id="repNFPercent">0%</div>
+          </div>
+        </div>
+        <div class="progress-wrap" style="margin-top:16px">
+          <div class="progress-bar">
+            <div class="progress-fill" id="repNFProgress" style="background:linear-gradient(90deg,var(--blue),var(--purple))"></div>
+          </div>
+          <div class="progress-labels">
+            <span>R$ 0</span>
+            <span>Limite MEI: R$ 81.000</span>
+          </div>
+        </div>
+        <div id="repNFWithoutAlert" class="nf-without-alert hidden"></div>
       </div>
 
       <div class="reports-grid">
@@ -571,9 +603,24 @@
           <input type="url" id="nfLink" placeholder="https://..." />
         </div>
         <div class="field field-full">
-          <label>Link direto do PDF (opcional)</label>
-          <input type="url" id="nfPDFLink" placeholder="Cole o link do PDF se tiver..." />
-          <div style="font-size:11px;color:var(--text3);margin-top:4px">💡 Você pode copiar o link do PDF direto do portal da prefeitura</div>
+          <label>PDF da Nota Fiscal (opcional)</label>
+          <div id="nfPDFDropzone" class="pdf-dropzone">
+            <input type="file" id="nfPDFFile" accept="application/pdf" hidden />
+            <div id="nfPDFEmpty" class="pdf-dropzone-empty">
+              <span class="pdf-dropzone-icon">📄</span>
+              <span>Clique para escolher o PDF</span>
+              <span class="pdf-dropzone-sub">ou arraste o arquivo aqui · máx 5MB</span>
+            </div>
+            <div id="nfPDFPreview" class="pdf-dropzone-preview hidden">
+              <span class="pdf-file-icon">📎</span>
+              <span id="nfPDFFileName" class="pdf-file-name"></span>
+              <button type="button" id="nfPDFRemove" class="pdf-file-remove" title="Remover">✕</button>
+            </div>
+            <div id="nfPDFProgress" class="pdf-upload-progress hidden">
+              <div class="pdf-upload-bar"><div id="nfPDFProgressFill" class="pdf-upload-fill"></div></div>
+              <span id="nfPDFProgressText">Enviando...</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>

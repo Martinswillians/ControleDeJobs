@@ -1,10 +1,8 @@
 // ═══════════════════════════════════════════════
 // Service Worker — Controle de Job (Atualizado)
 // ═══════════════════════════════════════════════
-
 // Mude essa versão sempre que fizer uma grande atualização no código do app
 const CACHE_NAME = "jobcontrol-v3.0";
-
 const STATIC_ASSETS = [
   "./",
   "./index.html",
@@ -18,7 +16,6 @@ const STATIC_ASSETS = [
   "./assets/icon-192.png",
   "./assets/icon-512.png"
 ];
-
 // Instalação: Salva os arquivos estáticos no cache inicial
 self.addEventListener("install", e => {
   e.waitUntil(
@@ -28,7 +25,6 @@ self.addEventListener("install", e => {
   );
   self.skipWaiting(); // Força o SW novo a se tornar ativo imediatamente
 });
-
 // Ativação: Limpa caches antigos de versões anteriores automaticamente
 self.addEventListener("activate", e => {
   e.waitUntil(
@@ -40,7 +36,6 @@ self.addEventListener("activate", e => {
   );
   self.clients.claim(); // Assume o controle da página imediatamente
 });
-
 // Intercepção de requisições: Estratégia Stale-While-Revalidate
 self.addEventListener("fetch", e => {
   // Ignora chamadas do Firebase/APIs externas para rodarem direto da rede
@@ -52,7 +47,6 @@ self.addEventListener("fetch", e => {
   ) {
     return;
   }
-
   e.respondWith(
     caches.open(CACHE_NAME).then(cache => {
       return cache.match(e.request).then(cachedResponse => {
@@ -65,7 +59,6 @@ self.addEventListener("fetch", e => {
         }).catch(() => {
           // Falha silenciosa se estiver offline
         });
-
         // Retorna o que estava no cache imediatamente (velocidade), ou aguarda a rede se não houver cache
         return cachedResponse || fetchPromise;
       });

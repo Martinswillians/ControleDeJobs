@@ -3,6 +3,7 @@
 // ═══════════════════════════════════════════════
 
 import { auth, db } from "./firebase-config.js";
+import { uploadPDF } from "./cloudinary.js";
 
 import {
   createUserWithEmailAndPassword,
@@ -361,6 +362,7 @@ function renderDashboard() {
 
   monthJobs.forEach(j => {
     const tr = document.createElement("tr");
+    tr.classList.add("clickable-row");
     tr.innerHTML = `
       <td class="job-date">${fmtDate(j.date)}</td>
       <td><div class="job-name">${j.name}</div></td>
@@ -374,11 +376,21 @@ function renderDashboard() {
           <button class="row-btn delete" title="Excluir" data-del="${j.id}">🗑️</button>
         </div>
       </td>`;
+    tr.addEventListener("click", () => openJobModal(j.id));
     tbody.appendChild(tr);
   });
 
   bindRowActions(tbody);
 }
+
+// Botão Filtrar — vai para Jobs com o mês atual do dashboard já aplicado
+$("dashFilterBtn").addEventListener("click", () => {
+  const monthStr = `${currentYear}-${String(currentMonth + 1).padStart(2, "0")}`;
+  navigateTo("jobs");
+  populateFilterMonths();
+  $("filterMonth").value = monthStr;
+  renderJobsPage();
+});
 
 // ─────────────────────────────────────────────
 // JOBS PAGE
@@ -402,6 +414,7 @@ function renderJobsPage() {
 
   jobs.forEach(j => {
     const tr = document.createElement("tr");
+    tr.classList.add("clickable-row");
     tr.innerHTML = `
       <td class="job-date">${fmtDate(j.date)}</td>
       <td><div class="job-name">${j.name}</div><div class="job-client">${j.client}</div></td>
@@ -416,6 +429,7 @@ function renderJobsPage() {
           <button class="row-btn delete" title="Excluir" data-del="${j.id}">🗑️</button>
         </div>
       </td>`;
+    tr.addEventListener("click", () => openJobModal(j.id));
     tbody.appendChild(tr);
   });
 
@@ -593,8 +607,12 @@ $("confirmDelete").addEventListener("click", async () => {
 // ─────────────────────────────────────────────
 // NF MODAL
 // ─────────────────────────────────────────────
+let selectedPDFFile = null;
+let currentPdfUrl = "";
+
 function openNFModal(jobId) {
   nfTargetJobId = jobId;
+  selectedPDFFile = null;
   const j = allJobs.find(x => x.id === jobId);
   if (!j) return;
 
@@ -606,28 +624,127 @@ function openNFModal(jobId) {
   $("nfNumber").value = nf.number || "";
   $("nfDate").value = nf.date || today();
   $("nfLink").value = nf.link || "";
-  $("nfPDFLink").value = nf.pdfUrl || "";
+  currentPdfUrl = nf.pdfUrl || "";
+
+  // Reset dropzone UI
+  resetPDFDropzone();
+  if (currentPdfUrl) {
+    showPDFPreview(nf.pdfName || "PDF anexado", currentPdfUrl);
+  }
+
   $("nfModal").classList.remove("hidden");
 }
-function closeNFModal() { $("nfModal").classList.add("hidden"); nfTargetJobId = null; }
+
+function closeNFModal() {
+  $("nfModal").classList.add("hidden");
+  nfTargetJobId = null;
+  selectedPDFFile = null;
+  currentPdfUrl = "";
+}
 $("closeNFModal").addEventListener("click", closeNFModal);
 $("cancelNFModal").addEventListener("click", closeNFModal);
+
+// ─────────────────────────────────────────────
+// PDF DROPZONE UI
+// ─────────────────────────────────────────────
+function resetPDFDropzone() {
+  $("nfPDFEmpty").classList.remove("hidden");
+  $("nfPDFPreview").classList.add("hidden");
+  $("nfPDFProgress").classList.add("hidden");
+  $("nfPDFFile").value = "";
+}
+
+function showPDFPreview(name, url) {
+  $("nfPDFEmpty").classList.add("hidden");
+  $("nfPDFProgress").classList.add("hidden");
+  $("nfPDFPreview").classList.remove("hidden");
+  $("nfPDFFileName").textContent = name;
+  $("nfPDFPreview").dataset.url = url || "";
+}
+
+$("nfPDFDropzone").addEventListener("click", (e) => {
+  if (e.target.id === "nfPDFRemove") return;
+  if ($("nfPDFPreview").classList.contains("hidden")) {
+    $("nfPDFFile").click();
+  }
+});
+
+$("nfPDFFile").addEventListener("change", (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  if (file.type !== "application/pdf") {
+    showToast("Apenas arquivos PDF são permitidos.", "error");
+    return;
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    showToast("O arquivo deve ter no máximo 5MB.", "error");
+    return;
+  }
+  selectedPDFFile = file;
+  showPDFPreview(file.name, null);
+});
+
+$("nfPDFRemove").addEventListener("click", (e) => {
+  e.stopPropagation();
+  selectedPDFFile = null;
+  currentPdfUrl = "";
+  resetPDFDropzone();
+});
+
+// Drag and drop
+["dragover", "dragleave", "drop"].forEach(evt => {
+  $("nfPDFDropzone").addEventListener(evt, (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (evt === "dragover") $("nfPDFDropzone").classList.add("drag-active");
+    if (evt === "dragleave" || evt === "drop") $("nfPDFDropzone").classList.remove("drag-active");
+    if (evt === "drop" && e.dataTransfer.files[0]) {
+      const file = e.dataTransfer.files[0];
+      if (file.type !== "application/pdf") {
+        showToast("Apenas arquivos PDF são permitidos.", "error");
+        return;
+      }
+      selectedPDFFile = file;
+      showPDFPreview(file.name, null);
+    }
+  });
+});
 
 $("saveNFBtn").addEventListener("click", async () => {
   if (!nfTargetJobId) return;
   const number = $("nfNumber").value.trim();
   const date = $("nfDate").value;
   const link = $("nfLink").value.trim();
-  const pdfUrl = $("nfPDFLink").value.trim();
 
   if (!number) return showToast("Informe o número da NF.", "error");
 
   loading(true);
   try {
     const j = allJobs.find(x => x.id === nfTargetJobId);
-    const nfData = { number, date, link, pdfUrl };
+    let pdfUrl = currentPdfUrl;
+    let pdfName = j?.nf?.pdfName || "";
 
-    // Status: se tem link de PDF = pago_nf_pdf, senão pago_nf
+    // Se selecionou novo arquivo, faz upload
+    if (selectedPDFFile) {
+      $("nfPDFProgress").classList.remove("hidden");
+      $("nfPDFPreview").classList.add("hidden");
+      try {
+        const result = await uploadPDF(selectedPDFFile, currentUser.uid, (pct) => {
+          $("nfPDFProgressFill").style.width = pct + "%";
+          $("nfPDFProgressText").textContent = `Enviando... ${pct}%`;
+        });
+        pdfUrl = result.url;
+        pdfName = selectedPDFFile.name;
+      } catch (uploadErr) {
+        showToast(uploadErr.message, "error");
+        loading(false);
+        $("nfPDFProgress").classList.add("hidden");
+        showPDFPreview(selectedPDFFile.name, null);
+        return;
+      }
+    }
+
+    const nfData = { number, date, link, pdfUrl, pdfName };
     const newStatus = pdfUrl ? "pago_nf_pdf" : "pago_nf";
 
     await updateDoc(doc(db, "users", currentUser.uid, "jobs", nfTargetJobId), {
@@ -687,10 +804,39 @@ function renderNFPage() {
 // REPORTS
 // ─────────────────────────────────────────────
 function renderReports() {
+  renderNFvsMEI();
   renderChartMes();
   renderChartCliente();
   renderChartStatus();
   renderTopClientes();
+}
+
+function renderNFvsMEI() {
+  const year = new Date().getFullYear();
+  const yearJobs = allJobs.filter(j => j.date?.startsWith(String(year)));
+
+  // Jobs com NF emitida (status pago_nf ou pago_nf_pdf)
+  const jobsWithNF = yearJobs.filter(j => j.status === "pago_nf" || j.status === "pago_nf_pdf");
+  const totalNF = jobsWithNF.reduce((a, j) => a + Number(j.value || 0), 0);
+  const countNF = jobsWithNF.length;
+  const pctNF = Math.min((totalNF / MEI_LIMIT) * 100, 100);
+
+  $("repNFTotal").textContent = fmt(totalNF);
+  $("repNFCount").textContent = countNF;
+  $("repNFPercent").textContent = pctNF.toFixed(1) + "%";
+  $("repNFProgress").style.width = pctNF + "%";
+
+  // Jobs pagos SEM nota fiscal emitida (alerta)
+  const paidWithoutNF = yearJobs.filter(j => j.status === "pago");
+  const totalWithoutNF = paidWithoutNF.reduce((a, j) => a + Number(j.value || 0), 0);
+
+  const alertBox = $("repNFWithoutAlert");
+  if (paidWithoutNF.length > 0) {
+    alertBox.classList.remove("hidden");
+    alertBox.innerHTML = `⚠️ Você tem <strong>${paidWithoutNF.length} job(s)</strong> pagos no valor de <strong>${fmt(totalWithoutNF)}</strong> sem nota fiscal emitida ainda este ano.`;
+  } else {
+    alertBox.classList.add("hidden");
+  }
 }
 
 function chartDefaults() {

@@ -942,3 +942,141 @@ body.has-demo-banner .main-content { padding-bottom: 60px; }
   background: var(--accent);
   color: #fff;
 }
+
+/* ══════════════════════════════════════════
+   PDF DROPZONE (Upload de NF)
+══════════════════════════════════════════ */
+.pdf-dropzone {
+  border: 2px dashed var(--border2);
+  border-radius: var(--radius);
+  background: var(--bg3);
+  padding: 24px 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: all .15s;
+  min-height: 90px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pdf-dropzone:hover { border-color: var(--accent); background: var(--accent-dim); }
+.pdf-dropzone.drag-active { border-color: var(--accent); background: var(--accent-dim); }
+
+.pdf-dropzone-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  color: var(--text2);
+  font-size: 13px;
+}
+.pdf-dropzone-icon { font-size: 28px; margin-bottom: 4px; }
+.pdf-dropzone-sub { font-size: 11px; color: var(--text3); }
+
+.pdf-dropzone-preview {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  cursor: default;
+}
+.pdf-file-icon { font-size: 20px; }
+.pdf-file-name {
+  flex: 1;
+  text-align: left;
+  font-size: 13px;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pdf-file-remove {
+  background: var(--red-dim);
+  border: none;
+  color: var(--red);
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+.pdf-file-remove:hover { background: var(--red); color: #fff; }
+
+.pdf-upload-progress {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.pdf-upload-bar {
+  height: 8px;
+  background: var(--bg2);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.pdf-upload-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--accent);
+  transition: width .2s;
+}
+.pdf-upload-progress span {
+  font-size: 12px;
+  color: var(--text2);
+}
+
+/* ══════════════════════════════════════════
+   NF x MEI REPORT
+══════════════════════════════════════════ */
+.nf-mei-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+.nf-mei-stat { text-align: left; }
+.nf-mei-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--text2);
+  margin-bottom: 6px;
+}
+.nf-mei-value {
+  font-size: 22px;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+}
+.nf-without-alert {
+  margin-top: 16px;
+  padding: 12px 16px;
+  background: var(--yellow-dim);
+  border-left: 4px solid var(--yellow);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--yellow);
+}
+
+@media (max-width: 700px) {
+  .nf-mei-summary { grid-template-columns: 1fr; gap: 12px; }
+}
+
+/* ══════════════════════════════════════════
+   DASHBOARD HEADER ACTIONS
+══════════════════════════════════════════ */
+.dashboard-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.clickable-row { cursor: pointer; }
+
+@media (max-width: 700px) {
+  .dashboard-header-actions { width: 100%; justify-content: space-between; }
+}
