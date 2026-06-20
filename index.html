@@ -241,7 +241,7 @@
               <th>Valor</th>
               <th>Status</th>
               <th>NF</th>
-              <th></th>
+              <th>Opções</th>
             </tr>
           </thead>
           <tbody id="allJobsBody"></tbody>
@@ -588,6 +588,19 @@
     <div class="modal-footer">
       <button class="btn-outline" id="cancelClientModal">Cancelar</button>
       <button class="btn-primary" id="saveClientBtn">Salvar Cliente</button>
+    </div>
+  </div>
+</div>
+
+<!-- NF VIEW MODAL (somente visualização) -->
+<div id="nfViewModal" class="modal-overlay hidden">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <h3>Nota Fiscal</h3>
+      <button class="modal-close" id="closeNFViewModal">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="nfViewContent"></div>
     </div>
   </div>
 </div>

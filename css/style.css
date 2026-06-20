@@ -1085,3 +1085,52 @@ body.has-demo-banner .main-content { padding-bottom: 60px; }
 @media (max-width: 700px) {
   .dashboard-header-actions { width: 100%; justify-content: space-between; }
 }
+
+/* ══════════════════════════════════════════
+   NF BUTTONS — Visualizar vs Inserir/Editar
+══════════════════════════════════════════ */
+.nf-view-btn {
+  background: var(--blue-dim);
+  border-color: var(--blue);
+  color: var(--blue);
+}
+.nf-view-btn:hover {
+  background: var(--blue);
+  color: #fff;
+}
+
+.nf-edit-btn {
+  background: var(--purple-dim);
+  border-color: var(--purple);
+  color: var(--purple);
+}
+.nf-edit-btn:hover {
+  background: var(--purple);
+  color: #fff;
+}
+
+.nf-icon { text-align: center; }
+
+/* NF View Modal — delete row */
+.nf-delete-row {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.btn-nf-delete {
+  width: 100%;
+  background: var(--red-dim);
+  border: 1px solid var(--red);
+  color: var(--red);
+  padding: 10px;
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .15s;
+}
+.btn-nf-delete:hover {
+  background: var(--red);
+  color: #fff;
+}

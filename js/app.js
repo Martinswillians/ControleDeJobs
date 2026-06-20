@@ -374,9 +374,9 @@ function renderDashboard() {
       <td>${statusBadge(j.status)}</td>
       <td>
         <div class="row-actions">
-          <button class="row-btn" title="Editar" data-edit="${j.id}">✏️</button>
-          <button class="row-btn" title="NF" data-nf="${j.id}">🧾</button>
-          <button class="row-btn delete" title="Excluir" data-del="${j.id}">🗑️</button>
+          <button class="row-btn" title="Editar Job" data-edit="${j.id}">✏️</button>
+          <button class="row-btn nf-edit-btn" title="Inserir/Editar NF" data-nf="${j.id}">🧾</button>
+          <button class="row-btn delete" title="Excluir Job" data-del="${j.id}">🗑️</button>
         </div>
       </td>`;
     tr.addEventListener("click", () => openJobModal(j.id));
@@ -424,12 +424,16 @@ function renderJobsPage() {
       <td>${j.client}</td>
       <td class="job-value">${fmt(j.value)}</td>
       <td>${statusBadge(j.status)}</td>
-      <td class="nf-icon">${j.nf?.number ? "🧾" : ""}</td>
+      <td class="nf-icon">
+        ${j.nf?.number
+          ? `<button class="row-btn nf-view-btn" title="Visualizar NF" data-nfview="${j.id}">🧾</button>`
+          : ""}
+      </td>
       <td>
         <div class="row-actions">
-          <button class="row-btn" title="Editar" data-edit="${j.id}">✏️</button>
-          <button class="row-btn" title="NF" data-nf="${j.id}">🧾</button>
-          <button class="row-btn delete" title="Excluir" data-del="${j.id}">🗑️</button>
+          <button class="row-btn" title="Editar Job" data-edit="${j.id}">✏️</button>
+          <button class="row-btn nf-edit-btn" title="Inserir/Editar NF" data-nf="${j.id}">🧾</button>
+          <button class="row-btn delete" title="Excluir Job" data-del="${j.id}">🗑️</button>
         </div>
       </td>`;
     tr.addEventListener("click", () => openJobModal(j.id));
@@ -483,6 +487,9 @@ function bindRowActions(tbody) {
   });
   tbody.querySelectorAll("[data-nf]").forEach(btn => {
     btn.addEventListener("click", e => { e.stopPropagation(); openNFModal(btn.dataset.nf); });
+  });
+  tbody.querySelectorAll("[data-nfview]").forEach(btn => {
+    btn.addEventListener("click", e => { e.stopPropagation(); openNFViewModal(btn.dataset.nfview); });
   });
   tbody.querySelectorAll("[data-del]").forEach(btn => {
     btn.addEventListener("click", e => { e.stopPropagation(); openDeleteModal(btn.dataset.del); });
@@ -590,22 +597,112 @@ function populateClientSuggestions() {
 // ─────────────────────────────────────────────
 function openDeleteModal(jobId) {
   deletingJobId = jobId;
+  $("deleteModal").dataset.mode = "job";
+  $("deleteModal").querySelector(".modal-header h3").textContent = "Excluir Job";
+  $("deleteModal").querySelector(".modal-body p").textContent =
+    "Tem certeza que deseja excluir este job? Esta ação não pode ser desfeita.";
   $("deleteModal").classList.remove("hidden");
 }
-$("closeDeleteModal").addEventListener("click", () => { $("deleteModal").classList.add("hidden"); deletingJobId = null; });
-$("cancelDelete").addEventListener("click", () => { $("deleteModal").classList.add("hidden"); deletingJobId = null; });
+function closeDeleteModalFn() {
+  $("deleteModal").classList.add("hidden");
+  deletingJobId = null;
+  deletingNFJobId = null;
+}
+$("closeDeleteModal").addEventListener("click", closeDeleteModalFn);
+$("cancelDelete").addEventListener("click", closeDeleteModalFn);
 $("confirmDelete").addEventListener("click", async () => {
+  const mode = $("deleteModal").dataset.mode || "job";
+
+  if (mode === "nf") {
+    if (!deletingNFJobId) return;
+    loading(true);
+    try {
+      await updateDoc(doc(db, "users", currentUser.uid, "jobs", deletingNFJobId), {
+        nf: null,
+        status: "pago"
+      });
+      showToast("Nota Fiscal excluída.");
+      closeDeleteModalFn();
+      closeNFViewModal();
+    } catch (e) {
+      console.error(e);
+      showToast("Erro ao excluir NF.", "error");
+    } finally { loading(false); }
+    return;
+  }
+
   if (!deletingJobId) return;
   loading(true);
   try {
     await deleteDoc(doc(db, "users", currentUser.uid, "jobs", deletingJobId));
     showToast("Job excluído.");
-    $("deleteModal").classList.add("hidden");
-    deletingJobId = null;
+    closeDeleteModalFn();
   } catch (e) {
     showToast("Erro ao excluir.", "error");
   } finally { loading(false); }
 });
+
+// ─────────────────────────────────────────────
+// NF VIEW MODAL (somente visualização)
+// ─────────────────────────────────────────────
+let nfViewJobId = null;
+
+function openNFViewModal(jobId) {
+  const j = allJobs.find(x => x.id === jobId);
+  if (!j || !j.nf?.number) return;
+  nfViewJobId = jobId;
+
+  $("nfViewContent").innerHTML = `
+    <div class="nf-card" style="border:none;padding:0">
+      <div class="nf-card-header">
+        <span class="nf-number">NF #${j.nf.number}</span>
+        ${statusBadge(j.status)}
+      </div>
+      <div class="nf-job-title">${j.name}</div>
+      <div class="nf-client">${j.client}</div>
+      <div class="nf-meta">
+        <span>💰 ${fmt(j.value)}</span>
+        <span>📅 Emissão: ${fmtDate(j.nf.date)}</span>
+        <span>🗓️ Job: ${fmtDate(j.date)}</span>
+      </div>
+      <div class="nf-actions">
+        ${j.nf.link ? `<a href="${j.nf.link}" target="_blank" class="btn-nf-link">🔗 Consultar NF</a>` : ""}
+        ${j.nf.pdfUrl ? `<button class="btn-nf-pdf" id="nfViewOpenPdf">📄 Ver PDF</button>` : ""}
+        <button class="btn-nf-pdf" id="nfViewEditBtn">✏️ Editar</button>
+      </div>
+      <div class="nf-delete-row">
+        <button class="btn-nf-delete" id="nfViewDeleteBtn">🗑️ Excluir Nota Fiscal</button>
+      </div>
+    </div>`;
+
+  if (j.nf.pdfUrl) {
+    $("nfViewOpenPdf")?.addEventListener("click", () => window.open(j.nf.pdfUrl, "_blank"));
+  }
+  $("nfViewEditBtn").addEventListener("click", () => {
+    closeNFViewModal();
+    openNFModal(jobId);
+  });
+  $("nfViewDeleteBtn").addEventListener("click", () => confirmDeleteNF(jobId));
+
+  $("nfViewModal").classList.remove("hidden");
+}
+
+function closeNFViewModal() {
+  $("nfViewModal").classList.add("hidden");
+  nfViewJobId = null;
+}
+$("closeNFViewModal").addEventListener("click", closeNFViewModal);
+
+let deletingNFJobId = null;
+
+function confirmDeleteNF(jobId) {
+  deletingNFJobId = jobId;
+  $("deleteModal").querySelector(".modal-header h3").textContent = "Excluir Nota Fiscal";
+  $("deleteModal").querySelector(".modal-body p").textContent =
+    "Tem certeza que deseja excluir esta nota fiscal? O documento não poderá ser recuperado.";
+  $("deleteModal").dataset.mode = "nf";
+  $("deleteModal").classList.remove("hidden");
+}
 
 // ─────────────────────────────────────────────
 // NF MODAL
@@ -790,17 +887,25 @@ function renderNFPage() {
       </div>
       <div class="nf-actions">
         ${j.nf.link ? `<a href="${j.nf.link}" target="_blank" class="btn-nf-link">🔗 Consultar NF</a>` : ""}
-        ${j.nf.pdfUrl ? `<button class="btn-nf-pdf" onclick="window.open('${j.nf.pdfUrl}','_blank')">📄 Ver PDF</button>` : ""}
-        <button class="btn-nf-pdf" onclick="(function(){
-          document.querySelectorAll('[data-nf]').forEach(b=>b.click&&false);
-          window._editNF('${j.id}');
-        })()">✏️ Editar</button>
+        ${j.nf.pdfUrl ? `<button class="btn-nf-pdf" data-nfpage-pdf="${j.nf.pdfUrl}">📄 Ver PDF</button>` : ""}
+        <button class="btn-nf-pdf" data-nfpage-edit="${j.id}">✏️ Editar</button>
+      </div>
+      <div class="nf-delete-row">
+        <button class="btn-nf-delete" data-nfpage-del="${j.id}">🗑️ Excluir Nota Fiscal</button>
       </div>`;
     container.appendChild(card);
   });
 
-  // expose for inline onclick
-  window._editNF = openNFModal;
+  // Bind actions
+  container.querySelectorAll("[data-nfpage-pdf]").forEach(btn => {
+    btn.addEventListener("click", () => window.open(btn.dataset.nfpagePdf, "_blank"));
+  });
+  container.querySelectorAll("[data-nfpage-edit]").forEach(btn => {
+    btn.addEventListener("click", () => openNFModal(btn.dataset.nfpageEdit));
+  });
+  container.querySelectorAll("[data-nfpage-del]").forEach(btn => {
+    btn.addEventListener("click", () => confirmDeleteNF(btn.dataset.nfpageDel));
+  });
 }
 
 // ─────────────────────────────────────────────
