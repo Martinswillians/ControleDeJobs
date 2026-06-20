@@ -818,12 +818,16 @@ function renderNFvsMEI() {
   const year = new Date().getFullYear();
   const yearJobs = allJobs.filter(j => j.date?.startsWith(String(year)));
 
+  // Faturamento total do ano — todos os jobs, com ou sem NF
+  const totalGeral = yearJobs.reduce((a, j) => a + Number(j.value || 0), 0);
+
   // Jobs com NF emitida (status pago_nf ou pago_nf_pdf)
   const jobsWithNF = yearJobs.filter(j => j.status === "pago_nf" || j.status === "pago_nf_pdf");
   const totalNF = jobsWithNF.reduce((a, j) => a + Number(j.value || 0), 0);
   const countNF = jobsWithNF.length;
   const pctNF = Math.min((totalNF / MEI_LIMIT) * 100, 100);
 
+  $("repFaturamentoTotal").textContent = fmt(totalGeral);
   $("repNFTotal").textContent = fmt(totalNF);
   $("repNFCount").textContent = countNF;
   $("repNFPercent").textContent = pctNF.toFixed(1) + "%";
@@ -934,12 +938,13 @@ function renderMEI() {
   const year = new Date().getFullYear();
   const yearJobs = allJobs.filter(j => j.date?.startsWith(String(year)));
   const faturado = yearJobs.reduce((a,j) => a + Number(j.value||0), 0);
-  const disponivel = MEI_LIMIT - faturado;
-  const pct = Math.min(faturado / MEI_LIMIT * 100, 100);
 
-  // Faturamento com Nota Fiscal emitida
+  // Faturamento com Nota Fiscal emitida — é esse valor que conta para o limite MEI
   const jobsComNF = yearJobs.filter(j => j.status === "pago_nf" || j.status === "pago_nf_pdf");
   const faturadoNF = jobsComNF.reduce((a,j) => a + Number(j.value||0), 0);
+
+  const disponivel = MEI_LIMIT - faturadoNF;
+  const pct = Math.min(faturadoNF / MEI_LIMIT * 100, 100);
 
   $("meiFaturado").textContent = fmt(faturado);
   $("meiFaturadoNF").textContent = fmt(faturadoNF);
@@ -947,9 +952,9 @@ function renderMEI() {
   $("meiPercent").textContent = pct.toFixed(1) + "%";
   $("meiProgress").style.width = pct + "%";
 
-  // Stats
+  // Stats (baseados no faturamento com NF, que é o que conta para o limite)
   const monthNow = new Date().getMonth() + 1;
-  const media = monthNow > 0 ? faturado / monthNow : 0;
+  const media = monthNow > 0 ? faturadoNF / monthNow : 0;
   const projecao = media * 12;
   const mesesRestantes = 12 - monthNow;
 
@@ -979,21 +984,24 @@ function renderMEI() {
 
 function updateMEIAlert() {
   const year = new Date().getFullYear();
-  const faturado = allJobs.filter(j => j.date?.startsWith(String(year))).reduce((a,j)=>a+Number(j.value||0),0);
-  const pct = faturado / MEI_LIMIT * 100;
+  const yearJobs = allJobs.filter(j => j.date?.startsWith(String(year)));
+  const faturadoNF = yearJobs
+    .filter(j => j.status === "pago_nf" || j.status === "pago_nf_pdf")
+    .reduce((a,j)=>a+Number(j.value||0),0);
+  const pct = faturadoNF / MEI_LIMIT * 100;
   const alert = $("meiAlert");
 
   if (pct >= 95) {
     alert.className = "mei-alert warn95";
-    alert.textContent = `🚨 Limite MEI: ${pct.toFixed(0)}% utilizado — R$ ${fmt(faturado)} de R$ 81.000`;
+    alert.textContent = `🚨 Limite MEI: ${pct.toFixed(0)}% utilizado — R$ ${fmt(faturadoNF)} de R$ 81.000 (com NF emitida)`;
     alert.classList.remove("hidden");
   } else if (pct >= 85) {
     alert.className = "mei-alert warn85";
-    alert.textContent = `⚠️ Limite MEI: ${pct.toFixed(0)}% utilizado`;
+    alert.textContent = `⚠️ Limite MEI: ${pct.toFixed(0)}% utilizado (com NF emitida)`;
     alert.classList.remove("hidden");
   } else if (pct >= 70) {
     alert.className = "mei-alert warn70";
-    alert.textContent = `💡 Limite MEI: ${pct.toFixed(0)}% utilizado`;
+    alert.textContent = `💡 Limite MEI: ${pct.toFixed(0)}% utilizado (com NF emitida)`;
     alert.classList.remove("hidden");
   } else {
     alert.classList.add("hidden");
