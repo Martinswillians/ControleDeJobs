@@ -129,11 +129,27 @@
       <div class="page-header">
         <h2>Dashboard</h2>
         <div class="dashboard-header-actions">
+          <div class="dash-view-toggle">
+            <button class="dash-view-btn active" data-view="month">Mês</button>
+            <button class="dash-view-btn" data-view="year">Ano</button>
+          </div>
+          <select id="dashStatusFilter" class="dash-status-select">
+            <option value="">Todos os status</option>
+            <option value="pendente">🟡 Pendente</option>
+            <option value="pago">🟢 Pago</option>
+            <option value="pago_nf">🔵 Pago + NF</option>
+            <option value="pago_nf_pdf">🟣 Pago + NF + PDF</option>
+          </select>
           <button class="btn-outline btn-sm" id="dashFilterBtn">🔍 Filtrar</button>
-          <div class="month-nav">
+          <div class="month-nav" id="dashMonthNav">
             <button id="prevMonth">‹</button>
             <span id="currentMonthLabel"></span>
             <button id="nextMonth">›</button>
+          </div>
+          <div class="month-nav hidden" id="dashYearNav">
+            <button id="prevYear">‹</button>
+            <span id="currentYearLabel"></span>
+            <button id="nextYear">›</button>
           </div>
         </div>
       </div>
@@ -144,15 +160,15 @@
       <!-- CARDS -->
       <div class="cards-grid">
         <div class="card card-green">
-          <div class="card-label">Recebido no Mês</div>
+          <div class="card-label" id="cardRecebidoLabel">Recebido no Mês</div>
           <div class="card-value" id="cardRecebido">R$ 0,00</div>
         </div>
         <div class="card card-yellow">
-          <div class="card-label">Pendente no Mês</div>
+          <div class="card-label" id="cardPendenteLabel">Pendente no Mês</div>
           <div class="card-value" id="cardPendente">R$ 0,00</div>
         </div>
         <div class="card card-blue">
-          <div class="card-label">Total do Mês</div>
+          <div class="card-label" id="cardTotalLabel">Total do Mês</div>
           <div class="card-value" id="cardTotal">R$ 0,00</div>
         </div>
         <div class="card card-purple">
@@ -164,7 +180,7 @@
           <div class="card-value" id="cardAnoNF">R$ 0,00</div>
         </div>
         <div class="card card-neutral">
-          <div class="card-label">Jobs no Mês</div>
+          <div class="card-label" id="cardJobsLabel">Jobs no Mês</div>
           <div class="card-value" id="cardJobs">0</div>
         </div>
         <div class="card card-neutral">
@@ -176,7 +192,7 @@
       <!-- RECENT JOBS TABLE -->
       <div class="section-card">
         <div class="section-header">
-          <h3>Jobs do mês</h3>
+          <h3 id="dashJobsTitle">Jobs do mês</h3>
           <button class="btn-primary btn-sm" id="addJobBtnDash">+ Novo Job</button>
         </div>
         <div class="table-wrap">
@@ -196,7 +212,7 @@
         </div>
         <div id="dashEmpty" class="empty-state hidden">
           <span>🎬</span>
-          <p>Nenhum job neste mês.<br>Clique em <strong>+ Novo Job</strong> para começar.</p>
+          <p>Nenhum job neste período.<br>Clique em <strong>+ Novo Job</strong> para começar.</p>
         </div>
       </div>
     </div>
@@ -276,6 +292,13 @@
     <div id="page-reports" class="page">
       <div class="page-header">
         <h2>Relatórios</h2>
+        <div class="reports-header-actions">
+          <select id="repPeriodSelect" class="dash-status-select">
+            <!-- preenchido via JS -->
+          </select>
+          <button class="btn-outline btn-sm" id="repExportExcel">📊 Excel</button>
+          <button class="btn-outline btn-sm" id="repExportPDF">📄 PDF</button>
+        </div>
       </div>
 
       <!-- NF x LIMITE MEI -->
