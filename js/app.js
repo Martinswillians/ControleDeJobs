@@ -2,8 +2,8 @@
 // app.js — Controle de Job
 // ═══════════════════════════════════════════════
 
-import { auth, db } from "./firebase-config.js";
-import { uploadPDF } from "./cloudinary.js";
+import { auth, db } from "./firebase-config.js?v=14";
+import { uploadPDF } from "./cloudinary.js?v=14";
 
 import {
   createUserWithEmailAndPassword,
@@ -21,12 +21,12 @@ import {
 import {
   subscribeClients, unsubscribeClients, initClientsEvents,
   updateClientSelects, openClientModal, allClients, getClientData
-} from "./clients.js";
+} from "./clients.js?v=14";
 
 import {
   checkAccess, showAccessBlocked, hideAccessBlocked,
   showDemoBanner, initAdminPanel, initAdminActions, ADMIN_UID
-} from "./access.js";
+} from "./access.js?v=14";
 
 // ─────────────────────────────────────────────
 // STATE
@@ -332,38 +332,56 @@ function refreshAllViews() {
 // ─────────────────────────────────────────────
 // DASHBOARD
 // ─────────────────────────────────────────────
+let dashView = "month"; // "month" | "year"
+let dashStatus = "";
+
 function renderDashboard() {
   updateMonthLabel();
-  const monthJobs = allJobs.filter(j => {
-    if (!j.date) return false;
-    const [y, m] = j.date.split("-");
-    return parseInt(m) - 1 === currentMonth && parseInt(y) === currentYear;
-  });
+  $("currentYearLabel").textContent = currentYear;
 
   const yearJobs = allJobs.filter(j => j.date?.startsWith(String(currentYear)));
 
-  const recebido = monthJobs.filter(j => j.status !== "pendente").reduce((a, j) => a + Number(j.value || 0), 0);
-  const pendente = monthJobs.filter(j => j.status === "pendente").reduce((a, j) => a + Number(j.value || 0), 0);
-  const total = monthJobs.reduce((a, j) => a + Number(j.value || 0), 0);
+  const monthJobs = yearJobs.filter(j => {
+    if (!j.date) return false;
+    const [, m] = j.date.split("-");
+    return parseInt(m) - 1 === currentMonth;
+  });
+
+  // Período exibido nos cards e tabela: mês ou ano, conforme o toggle
+  let periodJobs = dashView === "month" ? monthJobs : yearJobs;
+  if (dashStatus) periodJobs = periodJobs.filter(j => j.status === dashStatus);
+
+  const periodLabel = dashView === "month" ? "no Mês" : "no Ano";
+  $("cardRecebidoLabel").textContent = `Recebido ${periodLabel}`;
+  $("cardPendenteLabel").textContent = `Pendente ${periodLabel}`;
+  $("cardTotalLabel").textContent = `Total ${periodLabel === "no Mês" ? "do Mês" : "do Ano"}`;
+  $("cardJobsLabel").textContent = `Jobs ${periodLabel}`;
+  $("dashJobsTitle").textContent = dashView === "month" ? "Jobs do mês" : "Jobs do ano";
+
+  const recebido = periodJobs.filter(j => j.status !== "pendente").reduce((a, j) => a + Number(j.value || 0), 0);
+  const pendente = periodJobs.filter(j => j.status === "pendente").reduce((a, j) => a + Number(j.value || 0), 0);
+  const total = periodJobs.reduce((a, j) => a + Number(j.value || 0), 0);
   const anoTotal = yearJobs.reduce((a, j) => a + Number(j.value || 0), 0);
   const anoNF = yearJobs.filter(j => j.status === "pago_nf" || j.status === "pago_nf_pdf")
                          .reduce((a, j) => a + Number(j.value || 0), 0);
-  const ticket = monthJobs.length ? total / monthJobs.length : 0;
+  const ticket = periodJobs.length ? total / periodJobs.length : 0;
 
   $("cardRecebido").textContent = fmt(recebido);
   $("cardPendente").textContent = fmt(pendente);
   $("cardTotal").textContent = fmt(total);
   $("cardAno").textContent = fmt(anoTotal);
   $("cardAnoNF").textContent = fmt(anoNF);
-  $("cardJobs").textContent = monthJobs.length;
+  $("cardJobs").textContent = periodJobs.length;
   $("cardTicket").textContent = fmt(ticket);
 
   // Table
   const tbody = $("dashJobsBody");
   tbody.innerHTML = "";
-  $("dashEmpty").classList.toggle("hidden", monthJobs.length > 0);
+  $("dashEmpty").classList.toggle("hidden", periodJobs.length > 0);
 
-  monthJobs.forEach(j => {
+  const sortedJobs = [...periodJobs].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+
+  sortedJobs.forEach(j => {
     const tr = document.createElement("tr");
     tr.classList.add("clickable-row");
     tr.innerHTML = `
@@ -386,12 +404,39 @@ function renderDashboard() {
   bindRowActions(tbody);
 }
 
-// Botão Filtrar — vai para Jobs com o mês atual do dashboard já aplicado
+// Toggle Mês / Ano
+document.querySelectorAll(".dash-view-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    dashView = btn.dataset.view;
+    document.querySelectorAll(".dash-view-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    $("dashMonthNav").classList.toggle("hidden", dashView !== "month");
+    $("dashYearNav").classList.toggle("hidden", dashView !== "year");
+    renderDashboard();
+  });
+});
+
+// Filtro de status no Dashboard
+$("dashStatusFilter").addEventListener("change", (e) => {
+  dashStatus = e.target.value;
+  renderDashboard();
+});
+
+// Navegação de ano (quando na visão Ano)
+$("prevYear").addEventListener("click", () => { currentYear--; renderDashboard(); });
+$("nextYear").addEventListener("click", () => { currentYear++; renderDashboard(); });
+
+// Botão Filtrar — vai para Jobs com o período + status atuais do dashboard já aplicados
 $("dashFilterBtn").addEventListener("click", () => {
-  const monthStr = `${currentYear}-${String(currentMonth + 1).padStart(2, "0")}`;
   navigateTo("jobs");
   populateFilterMonths();
-  $("filterMonth").value = monthStr;
+  if (dashView === "month") {
+    const monthStr = `${currentYear}-${String(currentMonth + 1).padStart(2, "0")}`;
+    $("filterMonth").value = monthStr;
+  } else {
+    $("filterMonth").value = "";
+  }
+  $("filterStatus").value = dashStatus;
   renderJobsPage();
 });
 
@@ -911,7 +956,57 @@ function renderNFPage() {
 // ─────────────────────────────────────────────
 // REPORTS
 // ─────────────────────────────────────────────
+let repPeriod = ""; // "" = mês atual (padrão), "YYYY-MM" = mês específico, "YYYY" = ano completo
+
+function populateReportPeriods() {
+  const sel = $("repPeriodSelect");
+  const cur = sel.value;
+
+  const months = [...new Set(allJobs.map(j => j.date?.slice(0,7)).filter(Boolean))].sort().reverse();
+  const years = [...new Set(allJobs.map(j => j.date?.slice(0,4)).filter(Boolean))].sort().reverse();
+
+  const defaultMonthStr = `${currentYear}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
+
+  let html = `<option value="${defaultMonthStr}">📅 Mês atual</option>`;
+  html += `<optgroup label="Meses">`;
+  months.forEach(m => {
+    const [y, mo] = m.split("-");
+    html += `<option value="${m}">${MONTHS_PT[parseInt(mo)-1]} ${y}</option>`;
+  });
+  html += `</optgroup><optgroup label="Anos">`;
+  years.forEach(y => {
+    html += `<option value="${y}">Ano ${y}</option>`;
+  });
+  html += `</optgroup>`;
+
+  sel.innerHTML = html;
+  sel.value = cur || repPeriod || defaultMonthStr;
+  if (!repPeriod) repPeriod = sel.value;
+}
+
+function getReportJobs() {
+  if (!repPeriod) return allJobs;
+  // Ano completo: string de 4 dígitos. Mês específico: "YYYY-MM"
+  if (repPeriod.length === 4) {
+    return allJobs.filter(j => j.date?.startsWith(repPeriod));
+  }
+  return allJobs.filter(j => j.date?.startsWith(repPeriod));
+}
+
+function reportPeriodLabel() {
+  if (!repPeriod) return "";
+  if (repPeriod.length === 4) return `Ano ${repPeriod}`;
+  const [y, m] = repPeriod.split("-");
+  return `${MONTHS_PT[parseInt(m)-1]} ${y}`;
+}
+
+$("repPeriodSelect").addEventListener("change", (e) => {
+  repPeriod = e.target.value;
+  renderReports();
+});
+
 function renderReports() {
+  populateReportPeriods();
   renderNFvsMEI();
   renderChartMes();
   renderChartCliente();
@@ -920,14 +1015,13 @@ function renderReports() {
 }
 
 function renderNFvsMEI() {
-  const year = new Date().getFullYear();
-  const yearJobs = allJobs.filter(j => j.date?.startsWith(String(year)));
+  const jobs = getReportJobs();
 
-  // Faturamento total do ano — todos os jobs, com ou sem NF
-  const totalGeral = yearJobs.reduce((a, j) => a + Number(j.value || 0), 0);
+  // Faturamento total do período — todos os jobs, com ou sem NF
+  const totalGeral = jobs.reduce((a, j) => a + Number(j.value || 0), 0);
 
   // Jobs com NF emitida (status pago_nf ou pago_nf_pdf)
-  const jobsWithNF = yearJobs.filter(j => j.status === "pago_nf" || j.status === "pago_nf_pdf");
+  const jobsWithNF = jobs.filter(j => j.status === "pago_nf" || j.status === "pago_nf_pdf");
   const totalNF = jobsWithNF.reduce((a, j) => a + Number(j.value || 0), 0);
   const countNF = jobsWithNF.length;
   const pctNF = Math.min((totalNF / MEI_LIMIT) * 100, 100);
@@ -939,13 +1033,13 @@ function renderNFvsMEI() {
   $("repNFProgress").style.width = pctNF + "%";
 
   // Jobs pagos SEM nota fiscal emitida (alerta)
-  const paidWithoutNF = yearJobs.filter(j => j.status === "pago");
+  const paidWithoutNF = jobs.filter(j => j.status === "pago");
   const totalWithoutNF = paidWithoutNF.reduce((a, j) => a + Number(j.value || 0), 0);
 
   const alertBox = $("repNFWithoutAlert");
   if (paidWithoutNF.length > 0) {
     alertBox.classList.remove("hidden");
-    alertBox.innerHTML = `⚠️ Você tem <strong>${paidWithoutNF.length} job(s)</strong> pagos no valor de <strong>${fmt(totalWithoutNF)}</strong> sem nota fiscal emitida ainda este ano.`;
+    alertBox.innerHTML = `⚠️ Você tem <strong>${paidWithoutNF.length} job(s)</strong> pagos no valor de <strong>${fmt(totalWithoutNF)}</strong> sem nota fiscal emitida ${reportPeriodLabel() ? `em ${reportPeriodLabel()}` : "ainda este período"}.`;
   } else {
     alertBox.classList.add("hidden");
   }
@@ -968,8 +1062,9 @@ function destroyChart(key) {
 
 function renderChartMes() {
   destroyChart("mes");
+  const jobs = getReportJobs();
   const byMonth = {};
-  allJobs.forEach(j => {
+  jobs.forEach(j => {
     const m = j.date?.slice(0,7);
     if (!m) return;
     byMonth[m] = (byMonth[m] || 0) + Number(j.value || 0);
@@ -990,8 +1085,9 @@ function renderChartMes() {
 
 function renderChartCliente() {
   destroyChart("cliente");
+  const jobs = getReportJobs();
   const byClient = {};
-  allJobs.forEach(j => { byClient[j.client] = (byClient[j.client] || 0) + 1; });
+  jobs.forEach(j => { byClient[j.client] = (byClient[j.client] || 0) + 1; });
   const entries = Object.entries(byClient).sort((a,b) => b[1]-a[1]).slice(0,8);
   const colors = ["#7c6af7","#3498db","#2ecc71","#f39c12","#e74c3c","#9b59b6","#1abc9c","#e67e22"];
 
@@ -1007,8 +1103,9 @@ function renderChartCliente() {
 
 function renderChartStatus() {
   destroyChart("status");
+  const jobs = getReportJobs();
   const counts = { pendente: 0, pago: 0, pago_nf: 0, pago_nf_pdf: 0 };
-  allJobs.forEach(j => { if (counts[j.status] !== undefined) counts[j.status]++; });
+  jobs.forEach(j => { if (counts[j.status] !== undefined) counts[j.status]++; });
 
   charts.status = new Chart($("chartStatus"), {
     type: "doughnut",
@@ -1021,8 +1118,9 @@ function renderChartStatus() {
 }
 
 function renderTopClientes() {
+  const jobs = getReportJobs();
   const byClient = {};
-  allJobs.forEach(j => { byClient[j.client] = (byClient[j.client] || 0) + Number(j.value || 0); });
+  jobs.forEach(j => { byClient[j.client] = (byClient[j.client] || 0) + Number(j.value || 0); });
   const sorted = Object.entries(byClient).sort((a,b) => b[1]-a[1]).slice(0,6);
   const max = sorted[0]?.[1] || 1;
 
@@ -1035,6 +1133,53 @@ function renderTopClientes() {
       </div>`).join("")}
   </div>`;
 }
+
+// ─────────────────────────────────────────────
+// REPORTS EXPORT (Excel / PDF)
+// ─────────────────────────────────────────────
+$("repExportExcel").addEventListener("click", () => {
+  const jobs = getReportJobs();
+  const data = jobs.map(j => ({
+    Data: fmtDate(j.date),
+    Job: j.name,
+    Cliente: j.client,
+    Valor: Number(j.value),
+    Status: statusLabel(j.status),
+    "NF Nº": j.nf?.number || "",
+    "NF Data": j.nf?.date ? fmtDate(j.nf.date) : "",
+    Observações: j.notes || ""
+  }));
+  const ws = XLSX.utils.json_to_sheet(data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Relatório");
+  const label = reportPeriodLabel().replace(/\s+/g, "_") || "geral";
+  XLSX.writeFile(wb, `relatorio-${label}.xlsx`);
+});
+
+$("repExportPDF").addEventListener("click", () => {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  doc.setFontSize(16);
+  doc.text("Relatório - Controle de Job", 14, 16);
+  doc.setFontSize(10);
+  doc.text(`Período: ${reportPeriodLabel() || "Todos"} | Exportado em ${new Date().toLocaleDateString("pt-BR")}`, 14, 22);
+
+  const jobs = getReportJobs();
+  const total = jobs.reduce((a,j)=>a+Number(j.value||0),0);
+
+  doc.autoTable({
+    startY: 28,
+    head: [["Data","Job","Cliente","Valor","Status"]],
+    body: jobs.map(j => [fmtDate(j.date), j.name, j.client, fmt(j.value), statusLabel(j.status)]),
+    foot: [["","","","TOTAL", fmt(total)]],
+    styles: { fontSize: 9 },
+    headStyles: { fillColor: [124,106,247] },
+    footStyles: { fontStyle: "bold" }
+  });
+
+  const label = reportPeriodLabel().replace(/\s+/g, "_") || "geral";
+  doc.save(`relatorio-${label}.pdf`);
+});
 
 // ─────────────────────────────────────────────
 // MEI
