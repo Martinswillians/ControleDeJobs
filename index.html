@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="assets/icon-192.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=14" />
+  <link rel="stylesheet" href="css/style.css?v=15" />
 </head>
 <body>
 
@@ -421,17 +421,24 @@
     <div id="page-clients" class="page">
       <div class="page-header">
         <h2>Clientes / Produtoras</h2>
-        <button class="btn-primary" id="addClientBtn">+ Novo Cliente</button>
+        <div class="clients-header-actions">
+          <button class="btn-outline btn-sm" id="importClientsBtn">📥 Importar</button>
+          <button class="btn-outline btn-sm" id="exportClientsBtn">📤 Exportar</button>
+          <button class="btn-primary btn-sm" id="addClientBtn">+ Novo Cliente</button>
+        </div>
       </div>
-      <div class="table-wrap">
-        <table class="jobs-table">
+      <!-- Input escondido para importar arquivo -->
+      <input type="file" id="importClientsFile" accept=".json,.csv" hidden />
+
+      <div class="table-wrap clients-table-wrap">
+        <table class="jobs-table clients-table">
           <thead>
             <tr>
               <th>Nome / Razão Social</th>
-              <th>CNPJ</th>
-              <th>Cidade</th>
+              <th class="hide-mobile">CNPJ</th>
+              <th class="hide-mobile">Cidade</th>
               <th>Status</th>
-              <th></th>
+              <th>Opções</th>
             </tr>
           </thead>
           <tbody id="clientsListBody"></tbody>
@@ -679,6 +686,39 @@
   </div>
 </div>
 
+<!-- IMPORT CLIENTS MODAL -->
+<div id="importClientsModal" class="modal-overlay hidden">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <h3>📥 Importar Clientes</h3>
+      <button class="modal-close" id="closeImportModal">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="importPreview" class="import-preview"></div>
+      <p style="color:var(--text2);font-size:13px;margin-bottom:16px">Como deseja importar os <strong id="importCount">0</strong> clientes encontrados?</p>
+      <div class="import-options">
+        <button class="import-option-btn" id="importMergeBtn">
+          <div class="import-option-icon">➕</div>
+          <div>
+            <div class="import-option-title">Adicionar sem sobrescrever</div>
+            <div class="import-option-desc">Mantém os clientes existentes e adiciona os novos. Clientes com o mesmo nome são ignorados.</div>
+          </div>
+        </button>
+        <button class="import-option-btn import-option-replace" id="importReplaceBtn">
+          <div class="import-option-icon">🔄</div>
+          <div>
+            <div class="import-option-title">Substituir lista completa</div>
+            <div class="import-option-desc">Apaga todos os clientes existentes e importa apenas os do arquivo. Esta ação não pode ser desfeita.</div>
+          </div>
+        </button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-outline" id="cancelImportModal">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <!-- DELETE CONFIRM MODAL -->
 <div id="deleteModal" class="modal-overlay hidden">
   <div class="modal modal-sm">
@@ -705,9 +745,9 @@
 </div>
 
 <!-- Firebase -->
-<script type="module" src="js/firebase-config.js?v=14"></script>
-<script type="module" src="js/app.js?v=14"></script>
-<script type="module" src="js/clients.js?v=14"></script>
+<script type="module" src="js/firebase-config.js?v=15"></script>
+<script type="module" src="js/app.js?v=15"></script>
+<script type="module" src="js/clients.js?v=15"></script>
 
 <!-- Chart.js -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
