@@ -2,8 +2,8 @@
 // app.js — Controle de Job
 // ═══════════════════════════════════════════════
 
-import { auth, db } from "./firebase-config.js?v=14";
-import { uploadPDF } from "./cloudinary.js?v=14";
+import { auth, db } from "./firebase-config.js?v=15";
+import { uploadPDF } from "./cloudinary.js?v=15";
 
 import {
   createUserWithEmailAndPassword,
@@ -21,12 +21,12 @@ import {
 import {
   subscribeClients, unsubscribeClients, initClientsEvents,
   updateClientSelects, openClientModal, allClients, getClientData
-} from "./clients.js?v=14";
+} from "./clients.js?v=15";
 
 import {
   checkAccess, showAccessBlocked, hideAccessBlocked,
   showDemoBanner, initAdminPanel, initAdminActions, ADMIN_UID
-} from "./access.js?v=14";
+} from "./access.js?v=15";
 
 // ─────────────────────────────────────────────
 // STATE

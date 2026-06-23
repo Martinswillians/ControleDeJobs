@@ -2,7 +2,7 @@
 // clients.js — Cadastro de Clientes/Produtoras
 // ═══════════════════════════════════════════════
 
-import { db } from "./firebase-config.js";
+import { db } from "./firebase-config.js?v=15";
 import {
   collection, doc, addDoc, setDoc, updateDoc, deleteDoc,
   onSnapshot, query, orderBy
@@ -237,6 +237,15 @@ export function initClientsEvents(uid, showToast, loading) {
   $("cancelClientModal")?.addEventListener("click", closeClientModal);
   $("saveClientBtn")?.addEventListener("click", () => saveClient(uid, showToast, loading));
 
+  // Export
+  $("exportClientsBtn")?.addEventListener("click", () => exportClients(showToast));
+
+  // Import
+  $("importClientsBtn")?.addEventListener("click", () => $("importClientsFile")?.click());
+  $("importClientsFile")?.addEventListener("change", (e) => handleImportFile(e, uid, showToast, loading));
+  $("closeImportModal")?.addEventListener("click", closeImportModal);
+  $("cancelImportModal")?.addEventListener("click", closeImportModal);
+
   // CNPJ mask
   $("cCNPJ")?.addEventListener("input", e => {
     let v = e.target.value.replace(/\D/g,"").slice(0,14);
@@ -253,4 +262,174 @@ export function initClientsEvents(uid, showToast, loading) {
     if (v.length > 5) v = v.replace(/(\d{5})(\d+)/,"$1-$2");
     e.target.value = v;
   });
+}
+
+// ─────────────────────────────────────────────
+// EXPORT CLIENTS
+// ─────────────────────────────────────────────
+function exportClients(showToast) {
+  if (allClients.length === 0) {
+    showToast("Nenhum cliente para exportar.", "error");
+    return;
+  }
+
+  // Remove campos internos do Firestore antes de exportar
+  const exportData = allClients.map(c => {
+    const { id, ...rest } = c;
+    return rest;
+  });
+
+  const json = JSON.stringify(exportData, null, 2);
+  const blob = new Blob([json], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `clientes-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast(`${allClients.length} clientes exportados!`);
+}
+
+// ─────────────────────────────────────────────
+// IMPORT CLIENTS
+// ─────────────────────────────────────────────
+let importedClients = [];
+
+function handleImportFile(e, uid, showToast, loading) {
+  const file = e.target.files[0];
+  if (!file) return;
+  e.target.value = ""; // reset so same file can be re-selected
+
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      let data = [];
+
+      if (file.name.endsWith(".json")) {
+        data = JSON.parse(ev.target.result);
+        if (!Array.isArray(data)) throw new Error("Formato inválido");
+      } else if (file.name.endsWith(".csv")) {
+        data = parseCSVClients(ev.target.result);
+      } else {
+        showToast("Formato não suportado. Use .json ou .csv exportado pelo app.", "error");
+        return;
+      }
+
+      if (data.length === 0) {
+        showToast("Nenhum cliente encontrado no arquivo.", "error");
+        return;
+      }
+
+      importedClients = data;
+      openImportModal(uid, showToast, loading);
+
+    } catch (err) {
+      console.error(err);
+      showToast("Erro ao ler o arquivo. Verifique o formato.", "error");
+    }
+  };
+  reader.readAsText(file, "UTF-8");
+}
+
+function parseCSVClients(csv) {
+  const lines = csv.trim().split("\n");
+  if (lines.length < 2) return [];
+  const headers = lines[0].split(",").map(h => h.trim().replace(/"/g, ""));
+  return lines.slice(1).map(line => {
+    const values = line.split(",").map(v => v.trim().replace(/"/g, ""));
+    const obj = {};
+    headers.forEach((h, i) => { obj[h] = values[i] || ""; });
+    return obj;
+  }).filter(c => c.name || c.Nome);
+}
+
+function openImportModal(uid, showToast, loading) {
+  $("importCount").textContent = importedClients.length;
+
+  // Preview dos primeiros 3
+  const preview = importedClients.slice(0, 3).map(c =>
+    `<div class="import-preview-item">🏢 ${c.name || c.Nome || "Sem nome"}</div>`
+  ).join("") + (importedClients.length > 3
+    ? `<div class="import-preview-more">...e mais ${importedClients.length - 3}</div>`
+    : "");
+  $("importPreview").innerHTML = preview;
+
+  // Bind buttons with current uid/showToast/loading context
+  const mergeBtn = $("importMergeBtn");
+  const replaceBtn = $("importReplaceBtn");
+
+  // Clone to remove old listeners
+  const newMerge = mergeBtn.cloneNode(true);
+  const newReplace = replaceBtn.cloneNode(true);
+  mergeBtn.parentNode.replaceChild(newMerge, mergeBtn);
+  replaceBtn.parentNode.replaceChild(newReplace, replaceBtn);
+
+  newMerge.addEventListener("click", () => doImport("merge", uid, showToast, loading));
+  newReplace.addEventListener("click", () => doImport("replace", uid, showToast, loading));
+
+  $("importClientsModal").classList.remove("hidden");
+}
+
+function closeImportModal() {
+  $("importClientsModal").classList.add("hidden");
+  importedClients = [];
+}
+
+async function doImport(mode, uid, showToast, loading) {
+  if (!uid || importedClients.length === 0) return;
+  loading(true);
+  try {
+    if (mode === "replace") {
+      // Apaga todos os clientes existentes primeiro
+      const delPromises = allClients.map(c =>
+        deleteDoc(doc(db, "users", uid, "clients", c.id))
+      );
+      await Promise.all(delPromises);
+    }
+
+    // Nomes já existentes (para merge — evitar duplicatas)
+    const existingNames = mode === "merge"
+      ? allClients.map(c => c.name?.toLowerCase().trim())
+      : [];
+
+    let added = 0;
+    let skipped = 0;
+
+    for (const client of importedClients) {
+      const name = (client.name || client.Nome || "").trim();
+      if (!name) continue;
+
+      if (mode === "merge" && existingNames.includes(name.toLowerCase())) {
+        skipped++;
+        continue;
+      }
+
+      await addDoc(collection(db, "users", uid, "clients"), {
+        name,
+        tradeName: client.tradeName || client["Nome Fantasia"] || "",
+        cnpj: client.cnpj || client.CNPJ || "",
+        email: client.email || client.Email || "",
+        phone: client.phone || client.Telefone || "",
+        address: client.address || client.Endereço || "",
+        city: client.city || client.Cidade || "",
+        state: client.state || client.Estado || "",
+        cep: client.cep || client.CEP || "",
+        notes: client.notes || client.Observações || "",
+        status: client.status || "ativo",
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+      added++;
+    }
+
+    closeImportModal();
+    const msg = mode === "replace"
+      ? `${added} clientes importados com sucesso!`
+      : `${added} adicionados${skipped > 0 ? `, ${skipped} ignorados (já existiam)` : ""}.`;
+    showToast(msg);
+
+  } catch (err) {
+    console.error(err);
+    showToast("Erro ao importar clientes.", "error");
+  } finally { loading(false); }
 }

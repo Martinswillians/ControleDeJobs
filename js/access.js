@@ -2,7 +2,7 @@
 // access.js — Controle de Acesso / Demo / Admin
 // ═══════════════════════════════════════════════
 
-import { db } from "./firebase-config.js";
+import { db } from "./firebase-config.js?v=15";
 import {
   doc, getDoc, setDoc, updateDoc, collection, onSnapshot, query, orderBy
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
@@ -12,7 +12,7 @@ import {
 //   firebase.auth().currentUser.uid  ou veja no Firebase Console > Authentication
 export const ADMIN_UID = "w9XSwxwewTaXwk0hCpyOuvCcd7G3";
 
-const DEMO_DAYS = 3;
+const DEMO_DAYS = 5;
 
 // ─────────────────────────────────────────────
 // CHECK ACCESS
