@@ -1200,3 +1200,63 @@ body.has-demo-banner .main-content { padding-bottom: 60px; }
   .reports-header-actions { width: 100%; }
   .reports-header-actions select { flex: 1; min-width: 140px; }
 }
+
+/* ══════════════════════════════════════════
+   CLIENTS PAGE — Header, Mobile Fix, Import
+══════════════════════════════════════════ */
+.clients-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Fix iPhone table overflow */
+.clients-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.clients-table {
+  min-width: 480px;
+  width: 100%;
+}
+
+@media (max-width: 600px) {
+  .clients-header-actions { width: 100%; justify-content: flex-end; }
+  .hide-mobile { display: none; }
+  .clients-table { min-width: unset; }
+}
+
+/* Import modal */
+.import-preview {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  font-size: 13px;
+}
+.import-preview-item { color: var(--text); padding: 3px 0; }
+.import-preview-more { color: var(--text2); font-style: italic; padding-top: 4px; }
+
+.import-options { display: flex; flex-direction: column; gap: 10px; }
+.import-option-btn {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  background: var(--bg3);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  text-align: left;
+  cursor: pointer;
+  transition: all .15s;
+  font-family: inherit;
+  color: var(--text);
+  width: 100%;
+}
+.import-option-btn:hover { border-color: var(--accent); background: var(--accent-dim); }
+.import-option-replace:hover { border-color: var(--red); background: var(--red-dim); }
+.import-option-icon { font-size: 22px; flex-shrink: 0; margin-top: 2px; }
+.import-option-title { font-weight: 700; font-size: 14px; margin-bottom: 4px; }
+.import-option-desc { font-size: 12px; color: var(--text2); line-height: 1.5; }
